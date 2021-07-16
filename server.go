@@ -11,21 +11,15 @@ import (
 	"math/rand"
 	"mime/multipart"
 	"net/http"
-	"os"
-	"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
-	"github.com/PuerkitoBio/throttled"
-	"github.com/PuerkitoBio/throttled/store"
-	"github.com/codegangsta/cli"
 	"github.com/go-martini/martini"
-	"github.com/martini-contrib/binding"
-	"github.com/martini-contrib/cors"
 	"github.com/tgulacsi/go/temp"
+	"github.com/throttled/throttled"
+	"github.com/throttled/throttled/store"
 )
 
 // UploadForm is a form structure to use when an image is POSTed to the server
@@ -55,182 +49,182 @@ func main() {
 		return
 	}
 
-	app := cli.NewApp()
-	app.Name = "pixlserv"
-	app.Usage = "transform and serve images"
-	app.Version = "1.0"
-	app.Commands = []cli.Command{
-		{
-			Name:  "run",
-			Usage: "Runs the server (run [config-file])",
-			Action: func(c *cli.Context) {
-				// Set up logging for server
-				log.SetPrefix("[pixlserv] ")
+	// app := cli.NewApp()
+	// app.Name = "pixlserv"
+	// app.Usage = "transform and serve images"
+	// app.Version = "1.0"
+	// app.Commands = []cli.Command{
+	// 	{
+	// 		Name:  "run",
+	// 		Usage: "Runs the server (run [config-file])",
+	// 		Action: func(c *cli.Context) {
+	// 			// Set up logging for server
+	// 			log.SetPrefix("[pixlserv] ")
 
-				if len(c.Args()) < 1 {
-					log.Println("You need to provide a path to a config file")
-					return
-				}
-				configFilePath := c.Args().First()
+	// 			if len(c.Args()) < 1 {
+	// 				log.Println("You need to provide a path to a config file")
+	// 				return
+	// 			}
+	// 			configFilePath := c.Args().First()
 
-				// Initialise configuration
-				err := configInit(configFilePath)
-				if err != nil {
-					log.Println("Configuration reading failed:", err)
-					return
-				}
-				log.Printf("Running with config: %+v", Config)
+	// 			// Initialise configuration
+	// 			err := configInit(configFilePath)
+	// 			if err != nil {
+	// 				log.Println("Configuration reading failed:", err)
+	// 				return
+	// 			}
+	// 			log.Printf("Running with config: %+v", Config)
 
-				// Initialise authentication
-				err = authInit()
-				if err != nil {
-					log.Println("Authentication initialisation failed:", err)
-					return
-				}
+	// 			// Initialise authentication
+	// 			err = authInit()
+	// 			if err != nil {
+	// 				log.Println("Authentication initialisation failed:", err)
+	// 				return
+	// 			}
 
-				// Initialise storage
-				err = storageInit()
-				if err != nil {
-					log.Println("Storage initialisation failed:", err)
-					return
-				}
+	// 			// Initialise storage
+	// 			err = storageInit()
+	// 			if err != nil {
+	// 				log.Println("Storage initialisation failed:", err)
+	// 				return
+	// 			}
 
-				// Run the server
-				m := martini.Classic()
-				if Config.throttlingRate > 0 {
-					m.Use(throttler(Config.throttlingRate))
-				}
-				m.Use(func(res http.ResponseWriter, req *http.Request) {
-					if uploadURLRe.MatchString(req.URL.Path) {
-						// The upload handler returns JSON
-						res.Header().Set("Content-Type", "application/json")
-					}
-				})
-				if Config.corsAllowOrigins != nil {
-					m.Use(cors.Allow(&cors.Options{
-						AllowOrigins: Config.corsAllowOrigins,
-					}))
-				}
-				m.Get("/", func() string {
-					return "It works!"
-				})
-				m.Get("/((?P<apikey>[A-Z0-9]+)/)?image/:parameters/**", transformationHandler)
-				m.Post("/((?P<apikey>[A-Z0-9]+)/)?upload", binding.MultipartForm(UploadForm{}), uploadHandler)
-				go m.Run()
+	// 			// Run the server
+	// 			m := martini.Classic()
+	// 			if Config.throttlingRate > 0 {
+	// 				m.Use(throttler(Config.throttlingRate))
+	// 			}
+	// 			m.Use(func(res http.ResponseWriter, req *http.Request) {
+	// 				if uploadURLRe.MatchString(req.URL.Path) {
+	// 					// The upload handler returns JSON
+	// 					res.Header().Set("Content-Type", "application/json")
+	// 				}
+	// 			})
+	// 			if Config.corsAllowOrigins != nil {
+	// 				m.Use(cors.Allow(&cors.Options{
+	// 					AllowOrigins: Config.corsAllowOrigins,
+	// 				}))
+	// 			}
+	// 			m.Get("/", func() string {
+	// 				return "It works!"
+	// 			})
+	// 			m.Get("/((?P<apikey>[A-Z0-9]+)/)?image/:parameters/**", transformationHandler)
+	// 			m.Post("/((?P<apikey>[A-Z0-9]+)/)?upload", binding.MultipartForm(UploadForm{}), uploadHandler)
+	// 			go m.Run()
 
-				// Wait for when the program is terminated
-				ch := make(chan os.Signal)
-				signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
-				<-ch
+	// 			// Wait for when the program is terminated
+	// 			ch := make(chan os.Signal)
+	// 			signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+	// 			<-ch
 
-				// Clean up
-				redisCleanUp()
-				storageCleanUp()
-			},
-		},
-		{
-			Name:  "api-key",
-			Usage: "Manages API keys",
-			Subcommands: []cli.Command{
-				{
-					Name:  "add",
-					Usage: "Adds a new one",
-					Action: func(c *cli.Context) {
-						key, secretKey, err := generateKey()
-						if err != nil {
-							log.Println("Adding a new API key failed, please try again")
-							return
-						}
+	// 			// Clean up
+	// 			redisCleanUp()
+	// 			storageCleanUp()
+	// 		},
+	// 	},
+	// 	{
+	// 		Name:  "api-key",
+	// 		Usage: "Manages API keys",
+	// 		Subcommands: []cli.Command{
+	// 			{
+	// 				Name:  "add",
+	// 				Usage: "Adds a new one",
+	// 				Action: func(c *cli.Context) {
+	// 					key, secretKey, err := generateKey()
+	// 					if err != nil {
+	// 						log.Println("Adding a new API key failed, please try again")
+	// 						return
+	// 					}
 
-						log.Printf("Key added: %s, secret: %s\nPlease save these now!", key, secretKey)
-					},
-				},
-				{
-					Name:  "generatesecret",
-					Usage: "Generates a new secret key for a given API key (generatesecret [key])",
-					Action: func(c *cli.Context) {
-						if len(c.Args()) < 1 {
-							log.Println("You need to provide an existing key")
-							return
-						}
-						key := c.Args().First()
-						secret, err := generateSecret(key)
-						if err != nil {
-							log.Println(err.Error())
-							return
-						}
-						log.Printf("The new secret is: %s. Please save it now.", secret)
-					},
-				},
-				{
-					Name:  "info",
-					Usage: "Shows information about a key (info [key])",
-					Action: func(c *cli.Context) {
-						if len(c.Args()) < 1 {
-							log.Println("You need to provide an existing key")
-							return
-						}
-						key := c.Args().First()
-						permissions, err := infoAboutKey(key)
-						if err != nil {
-							log.Println(err.Error())
-							return
-						}
-						log.Println("Key:", key)
-						log.Println("Permissions:", permissions)
-					},
-				},
-				{
-					Name:  "list",
-					Usage: "Shows all keys",
-					Action: func(c *cli.Context) {
-						keys, err := listKeys()
-						if err != nil {
-							log.Println("Retrieving the list of all keys failed")
-							return
-						}
+	// 					log.Printf("Key added: %s, secret: %s\nPlease save these now!", key, secretKey)
+	// 				},
+	// 			},
+	// 			{
+	// 				Name:  "generatesecret",
+	// 				Usage: "Generates a new secret key for a given API key (generatesecret [key])",
+	// 				Action: func(c *cli.Context) {
+	// 					if len(c.Args()) < 1 {
+	// 						log.Println("You need to provide an existing key")
+	// 						return
+	// 					}
+	// 					key := c.Args().First()
+	// 					secret, err := generateSecret(key)
+	// 					if err != nil {
+	// 						log.Println(err.Error())
+	// 						return
+	// 					}
+	// 					log.Printf("The new secret is: %s. Please save it now.", secret)
+	// 				},
+	// 			},
+	// 			{
+	// 				Name:  "info",
+	// 				Usage: "Shows information about a key (info [key])",
+	// 				Action: func(c *cli.Context) {
+	// 					if len(c.Args()) < 1 {
+	// 						log.Println("You need to provide an existing key")
+	// 						return
+	// 					}
+	// 					key := c.Args().First()
+	// 					permissions, err := infoAboutKey(key)
+	// 					if err != nil {
+	// 						log.Println(err.Error())
+	// 						return
+	// 					}
+	// 					log.Println("Key:", key)
+	// 					log.Println("Permissions:", permissions)
+	// 				},
+	// 			},
+	// 			{
+	// 				Name:  "list",
+	// 				Usage: "Shows all keys",
+	// 				Action: func(c *cli.Context) {
+	// 					keys, err := listKeys()
+	// 					if err != nil {
+	// 						log.Println("Retrieving the list of all keys failed")
+	// 						return
+	// 					}
 
-						log.Println("Keys:", keys)
-					},
-				},
-				{
-					Name:  "modify",
-					Usage: "Modifies permissions for a key (modify [key] [add/remove] [" + authPermissionsOptions() + "])",
-					Action: func(c *cli.Context) {
-						if len(c.Args()) < 3 {
-							log.Println("You need to provide an existing key, operation and a permission")
-							return
-						}
-						key := c.Args().First()
-						err := modifyKey(key, c.Args()[1], c.Args()[2])
-						if err != nil {
-							log.Println(err.Error())
-							return
-						}
-						log.Println("The key has been updated")
-					},
-				},
-				{
-					Name:  "remove",
-					Usage: "Removes an existing key (remove [key])",
-					Action: func(c *cli.Context) {
-						if len(c.Args()) < 1 {
-							log.Println("You need to provide an existing key")
-							return
-						}
-						err := removeKey(c.Args().First())
-						if err != nil {
-							log.Println(err.Error())
-							return
-						}
-						log.Println("The key was successfully removed")
-					},
-				},
-			},
-		},
-	}
+	// 					log.Println("Keys:", keys)
+	// 				},
+	// 			},
+	// 			{
+	// 				Name:  "modify",
+	// 				Usage: "Modifies permissions for a key (modify [key] [add/remove] [" + authPermissionsOptions() + "])",
+	// 				Action: func(c *cli.Context) {
+	// 					if len(c.Args()) < 3 {
+	// 						log.Println("You need to provide an existing key, operation and a permission")
+	// 						return
+	// 					}
+	// 					key := c.Args().First()
+	// 					err := modifyKey(key, c.Args()[1], c.Args()[2])
+	// 					if err != nil {
+	// 						log.Println(err.Error())
+	// 						return
+	// 					}
+	// 					log.Println("The key has been updated")
+	// 				},
+	// 			},
+	// 			{
+	// 				Name:  "remove",
+	// 				Usage: "Removes an existing key (remove [key])",
+	// 				Action: func(c *cli.Context) {
+	// 					if len(c.Args()) < 1 {
+	// 						log.Println("You need to provide an existing key")
+	// 						return
+	// 					}
+	// 					err := removeKey(c.Args().First())
+	// 					if err != nil {
+	// 						log.Println(err.Error())
+	// 						return
+	// 					}
+	// 					log.Println("The key was successfully removed")
+	// 				},
+	// 			},
+	// 		},
+	// 	},
+	// }
 
-	app.Run(os.Args)
+	// app.Run(os.Args)
 }
 
 func transformationHandler(params martini.Params) (int, string) {

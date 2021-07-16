@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"github.com/twinj/uuid"
 )
 
@@ -25,7 +25,7 @@ var (
 
 func init() {
 	// Change the UUID format to remove surrounding braces and dashes
-	uuid.SwitchFormat(uuid.Clean)
+	// uuid.SwitchFormat(uuid.cl)
 }
 
 func authInit() error {

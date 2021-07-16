@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"code.google.com/p/goauth2/oauth/jwt"
-	gcs "code.google.com/p/google-api-go-client/storage/v1beta1"
+	// "code.google.com/p/goauth2/oauth/jwt"
+	// gcs "code.google.com/p/google-api-go-client/storage/v1beta1"
 	"github.com/mitchellh/goamz/aws"
 	"github.com/mitchellh/goamz/s3"
 )
@@ -222,76 +222,79 @@ func (s *s3Storage) imageExists(imagePath string) bool {
 
 // gcsStorage is a storage implementation using Google Cloud Storage
 type gcsStorage struct {
-	client  *http.Client
-	service *gcs.Service
-	bucket  string
+	client *http.Client
+	// service *gcs.Service
+	bucket string
 }
 
 func (s *gcsStorage) init() error {
-	jwtToken := jwt.NewToken(os.Getenv(gcsIssEnvVar), gcs.DevstorageRead_writeScope, []byte(os.Getenv(gcsKeyEnvVar)))
-	oauthToken, err := jwtToken.Assert(http.DefaultClient)
-	if err != nil {
-		return err
-	}
+	// jwtToken := jwt.NewToken(os.Getenv(gcsIssEnvVar), gcs.DevstorageRead_writeScope, []byte(os.Getenv(gcsKeyEnvVar)))
+	// oauthToken, err := jwtToken.Assert(http.DefaultClient)
+	// if err != nil {
+	// 	return err
+	// }
 
-	client := (&jwt.Transport{jwtToken, oauthToken, http.DefaultTransport}).Client()
+	// client := (&jwt.Transport{jwtToken, oauthToken, http.DefaultTransport}).Client()
 
-	service, err := gcs.New(client)
-	if err != nil {
-		return err
-	}
+	// service, err := gcs.New(client)
+	// if err != nil {
+	// 	return err
+	// }
 
-	s.client = client
-	s.service = service
-	s.bucket = os.Getenv(gcsBucketEnvVar)
+	// s.client = client
+	// s.service = service
+	// s.bucket = os.Getenv(gcsBucketEnvVar)
 
 	return nil
 }
 
 func (s *gcsStorage) loadImage(imagePath string) (image.Image, string, error) {
-	obj, err := s.service.Objects.Get(s.bucket, imagePath).Do()
-	if err != nil {
-		return nil, "", err
-	}
+	// obj, err := s.service.Objects.Get(s.bucket, imagePath).Do()
+	// if err != nil {
+	// 	return nil, "", err
+	// }
 
-	resp, err := s.client.Get(obj.Media.Link)
-	if err != nil {
-		return nil, "", err
-	}
-	defer resp.Body.Close()
+	// resp, err := s.client.Get(obj.Media.Link)
+	// if err != nil {
+	// 	return nil, "", err
+	// }
+	// defer resp.Body.Close()
 
-	format := strings.TrimLeft(filepath.Ext(imagePath), ".")
-	image, err := readImage(resp.Body, format)
-	if err != nil {
-		return nil, "", err
-	}
+	// format := strings.TrimLeft(filepath.Ext(imagePath), ".")
+	// image, err := readImage(resp.Body, format)
+	// if err != nil {
+	// 	return nil, "", err
+	// }
 
-	return image, format, nil
+	// return image, format, nil
+	return image.Black, "", nil
 }
 
 func (s *gcsStorage) saveImage(img image.Image, format string, imagePath string) (int, error) {
 	buffer := &bytes.Buffer{}
-	err := writeImage(img, format, buffer)
-	if err != nil {
-		return 0, err
-	}
+	// err := writeImage(img, format, buffer)
+	// if err != nil {
+	// 	return 0, err
+	// }
 
 	size := buffer.Len()
-	_, err = s.service.Objects.Insert(s.bucket, &gcs.Object{Name: imagePath}).Media(buffer).Do()
-	if err != nil {
-		return 0, err
-	}
-	return size, err
+	// _, err = s.service.Objects.Insert(s.bucket, &gcs.Object{Name: imagePath}).Media(buffer).Do()
+	// if err != nil {
+	// 	return 0, err
+	// }
+	return size, nil
 }
 
 func (s *gcsStorage) deleteImage(imagePath string) error {
-	return s.service.Objects.Delete(s.bucket, imagePath).Do()
+	// return s.service.Objects.Delete(s.bucket, imagePath).Do()
+	return nil
 }
 
 func (s *gcsStorage) imageExists(imagePath string) bool {
-	obj, err := s.service.Objects.Get(s.bucket, imagePath).Do()
-	if err != nil {
-		return false
-	}
-	return obj != nil
+	// obj, err := s.service.Objects.Get(s.bucket, imagePath).Do()
+	// if err != nil {
+	// 	return false
+	// }
+	// return obj != nil
+	return false
 }

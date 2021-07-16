@@ -16,8 +16,8 @@ import (
 
 	"crypto/sha1"
 
-	"code.google.com/p/freetype-go/freetype"
-	"code.google.com/p/freetype-go/freetype/truetype"
+	"github.com/golang/freetype"
+	"github.com/golang/freetype/truetype"
 	"github.com/nfnt/resize"
 )
 
@@ -119,27 +119,27 @@ func (t *Text) hash() []byte {
 func (t *Text) getFontMetrics(scale int) FontMetrics {
 	// Adapted from: https://code.google.com/p/plotinum/
 
-	// Converts truetype.FUnit to float64
-	fUnit2Float64 := float64(t.size) / float64(t.font.FUnitsPerEm())
+	// // Converts truetype.FUnit to float64
+	// fUnit2Float64 := float64(t.size) / float64(t.font.FUnitsPerEm())
 
-	width := 0
-	prev, hasPrev := truetype.Index(0), false
-	for _, rune := range t.content {
-		index := t.font.Index(rune)
-		if hasPrev {
-			width += int(t.font.Kerning(t.font.FUnitsPerEm(), prev, index))
-		}
-		width += int(t.font.HMetric(t.font.FUnitsPerEm(), index).AdvanceWidth)
-		prev, hasPrev = index, true
-	}
-	widthFloat := float64(width) * fUnit2Float64 * float64(scale)
+	// width := 0
+	// prev, hasPrev := truetype.Index(0), false
+	// for _, rune := range t.content {
+	// 	index := t.font.Index(rune)
+	// 	if hasPrev {
+	// 		width += int(t.font.Kern(t.font.FUnitsPerEm(), prev, index))
+	// 	}
+	// 	width += int(t.font.HMetric(Int26_6(t.font.FUnitsPerEm()), index).AdvanceWidth)
+	// 	prev, hasPrev = index, true
+	// }
+	// widthFloat := float64(width) * fUnit2Float64 * float64(scale)
 
-	bounds := t.font.Bounds(t.font.FUnitsPerEm())
-	height := float64(bounds.YMax-bounds.YMin) * fUnit2Float64 * float64(scale)
-	ascent := float64(bounds.YMax) * fUnit2Float64 * float64(scale)
-	descent := float64(bounds.YMin) * fUnit2Float64 * float64(scale)
+	// bounds := t.font.Bounds(Int26_6(t.font.FUnitsPerEm()))
+	// height := float64(bounds.Max.Y-bounds.Min.Y) * fUnit2Float64 * float64(scale)
+	// ascent := float64(bounds.Max.Y) * fUnit2Float64 * float64(scale)
+	// descent := float64(bounds.Min.Y) * fUnit2Float64 * float64(scale)
 
-	return FontMetrics{widthFloat, height, ascent, descent}
+	return FontMetrics{0, 0, 0, 0}
 }
 
 func transformCropAndResize(img image.Image, transformation *Transformation) (imgNew image.Image) {
@@ -290,13 +290,13 @@ func transformCropAndResize(img image.Image, transformation *Transformation) (im
 			c.SetFontSize(size)
 
 			fontMetrics := text.getFontMetrics(scale)
-			width := int(c.PointToFix32(fontMetrics.width) >> 8)
-			height := int(c.PointToFix32(fontMetrics.height) >> 8)
+			width := int(c.PointToFixed(fontMetrics.width) >> 8)
+			height := int(c.PointToFixed(fontMetrics.height) >> 8)
 
 			pt := calculateTopLeftPointFromGravity(text.gravity, width, height, bounds.Dx(), bounds.Dy())
 			pt = pt.Add(getTranslation(text.gravity, text.x*scale, text.y*scale))
 			x := pt.X
-			y := pt.Y + int(c.PointToFix32(fontMetrics.ascent)>>8)
+			y := pt.Y + int(c.PointToFixed(fontMetrics.ascent)>>8)
 
 			_, err := c.DrawString(text.content, freetype.Pt(x, y))
 			if err != nil {
